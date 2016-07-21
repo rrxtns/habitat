@@ -171,6 +171,7 @@ impl ServiceConfig {
         }
 
         let final_data = convert::toml_to_json(final_toml);
+        debug!("Rendering TOML -> JSON: {}", &final_data);
         let mut should_restart = false;
         for config in config_files {
             debug!("Rendering template {}", &config);
@@ -519,13 +520,14 @@ impl Pkg {
             None => "".to_string(),
         };
 
-        let (default_svc_user, default_svc_group) = match hab_users::get_user_and_group(&pkg_install) {
-            Ok((svc_user, svc_group)) => (svc_user, svc_group),
-            Err(_e) => {
-                // TODO
-                panic!("Can't get default service and user");
-            }
-        };
+        let (default_svc_user, default_svc_group) =
+            match hab_users::get_user_and_group(&pkg_install) {
+                Ok((svc_user, svc_group)) => (svc_user, svc_group),
+                Err(_e) => {
+                    // TODO
+                    panic!("Can't get default service and user");
+                }
+            };
 
         let svc_user = pkg_install.svc_user().unwrap_or(None);
         let svc_group = pkg_install.svc_group().unwrap_or(None);
@@ -738,6 +740,72 @@ mod test {
             let version_toml = h.to_toml().unwrap();
             let version = version_toml.lookup("version").unwrap().as_str().unwrap();
             assert_eq!(version, VERSION);
+        }
+    }
+
+    mod handlebars {
+
+        use handlebars::Handlebars;
+        use std::collections::BTreeMap;
+        use super::super::never_escape_fn;
+        use toml;
+        use util::handlebars_helpers;
+        use util::convert;
+
+        #[test]
+        fn handlebars_each_test() {
+
+            let toml = r#"
+            [hab]
+            version="0.8.0"
+
+            [pkg]
+            exposes = ["1234"]
+
+            [cfg]
+            max_connections=10000
+
+            [[cfg.ports]]
+            port = 8080
+
+            [[cfg.ports]]
+            port = 8081
+
+            [sys]
+            gossip_ip="127.0.0.1"
+
+            "#;
+
+            let template = r#"{{#each cfg.ports}} port="{{port}}" maxConnections="{{../../max_connections}}" {{/each}}"#;
+
+            let value = toml::Parser::new(toml).parse().unwrap();
+            let table = toml::Value::Table(value);
+            println!("Parsed TOML");
+            println!("{}", &table.to_string());
+
+            let final_data = convert::toml_to_json(table);
+
+            println!("TOML -> JSON = {}", &final_data);
+            let mut handlebars = Handlebars::new();
+
+            handlebars.register_helper("json", Box::new(handlebars_helpers::json_helper));
+            handlebars.register_helper("toml", Box::new(handlebars_helpers::toml_helper));
+            handlebars.register_escape_fn(never_escape_fn);
+
+            handlebars.register_template_string("foo", template.to_string()).unwrap();
+            match handlebars.render("foo", &final_data) {
+                Ok(r) => {
+                    println!("---------------");
+                    println!("Rendered template:");
+                    println!("{}", r);
+                    println!("---------------");
+                    let expected_result = r#" port="8080" maxConnections="10000"  port="8081" maxConnections="10000" "#;
+                    assert_eq!(expected_result, r);
+                }
+                Err(e) => {
+                    panic!("Render failed {:?}", e);
+                }
+            }
         }
     }
 }
