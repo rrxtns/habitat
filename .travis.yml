@@ -10,8 +10,8 @@ matrix:
   include:
   - language: rust
     env:
-    - COMPONENTS=bin LIBSODIUM=$HOME/pkgs/libsodium/1.0.8 LIBARCHIVE=$HOME/pkgs/libarchive/3.2.0 PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$LIBARCHIVE/lib/pkgconfig:$LIBSODIUM/lib/pkgconfig" LD_LIBRARY_PATH="LD_LIBRARY_PATH:$LIBARCHIVE/lib:$LIBSODIUM/lib"
-    - AFFECTED_DIRS="components/director|components/hab|components/sup"
+      - COMPONENTS=bin LIBSODIUM=$HOME/pkgs/libsodium/1.0.8 LIBARCHIVE=$HOME/pkgs/libarchive/3.2.0 LIBZMQ_PREFIX=$HOME/pkgs/zeromq/4.1.4 PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$LIBARCHIVE/lib/pkgconfig:$LIBSODIUM/lib/pkgconfig:$LIBZMQ_PREFIX/lib/pkgconfig" LD_LIBRARY_PATH="LD_LIBRARY_PATH:$LIBARCHIVE/lib:$LIBSODIUM/lib:$LIBZMQ_PREFIX/lib"
+      - AFFECTED_DIRS="components/director|components/hab|components/sup"
     rust: stable
     sudo: false
     addons:
@@ -27,7 +27,6 @@ matrix:
         - liblzma-dev
         - libprotobuf-dev
         - libssl-dev
-        - libzmq3-dev
         - pkg-config
     cache:
       apt: true
@@ -35,9 +34,11 @@ matrix:
       directories:
       - "$HOME/rust"
       - "$HOME/pkgs"
+      - "$HOME/.cargo"
       - target
     before_install:
     - ./support/ci/fast_pass.sh || exit 0
+    - ./support/ci/compile_zmq.sh
     - ./support/ci/compile_libsodium.sh
     - ./support/ci/compile_libarchive.sh
     - ./support/ci/install_rustfmt.sh
@@ -48,8 +49,8 @@ matrix:
     - ./support/ci/lint.sh
   - language: rust
     env:
-    - COMPONENTS=lib LIBSODIUM=$HOME/pkgs/libsodium/1.0.8 LIBARCHIVE=$HOME/pkgs/libarchive/3.2.0 PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$LIBARCHIVE/lib/pkgconfig:$LIBSODIUM/lib/pkgconfig" LD_LIBRARY_PATH="LD_LIBRARY_PATH:$LIBARCHIVE/lib:$LIBSODIUM/lib"
-    - AFFECTED_DIRS="components/builder-dbcache|components/builder-protocol|components/common|components/core|components/builder-depot-client|components/http-client|components/net"
+      - COMPONENTS=lib LIBSODIUM=$HOME/pkgs/libsodium/1.0.8 LIBARCHIVE=$HOME/pkgs/libarchive/3.2.0 LIBZMQ_PREFIX=$HOME/pkgs/zeromq/4.1.4 PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$LIBARCHIVE/lib/pkgconfig:$LIBSODIUM/lib/pkgconfig:$LIBZMQ_PREFIX/lib/pkgconfig" LD_LIBRARY_PATH="LD_LIBRARY_PATH:$LIBARCHIVE/lib:$LIBSODIUM/lib:$LIBZMQ_PREFIX/lib"
+      - AFFECTED_DIRS="components/builder-dbcache|components/builder-protocol|components/common|components/core|components/builder-depot-client|components/http-client|components/net"
     rust: stable
     sudo: false
     addons:
@@ -65,7 +66,6 @@ matrix:
         - liblzma-dev
         - libprotobuf-dev
         - libssl-dev
-        - libzmq3-dev
         - pkg-config
     cache:
       apt: true
@@ -73,9 +73,11 @@ matrix:
       directories:
       - "$HOME/rust"
       - "$HOME/pkgs"
+      - "$HOME/.cargo"
       - target
     before_install:
     - ./support/ci/fast_pass.sh || exit 0
+    - ./support/ci/compile_zmq.sh
     - ./support/ci/compile_libsodium.sh
     - ./support/ci/compile_libarchive.sh
     - ./support/ci/install_rustfmt.sh
@@ -85,8 +87,8 @@ matrix:
     - ./support/ci/lint.sh
   - language: rust
     env:
-    - COMPONENTS=srv LIBSODIUM=$HOME/pkgs/libsodium/1.0.8 LIBARCHIVE=$HOME/pkgs/libarchive/3.2.0 PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$LIBARCHIVE/lib/pkgconfig:$LIBSODIUM/lib/pkgconfig" LD_LIBRARY_PATH="LD_LIBRARY_PATH:$LIBARCHIVE/lib:$LIBSODIUM/lib"
-    - AFFECTED_DIRS="components/builder-api|components/builder-admin|components/builder-jobsrv|components/builder-sessionsrv|components/builder-vault|components/builder-worker|components/builder-depot"
+      - COMPONENTS=srv LIBSODIUM=$HOME/pkgs/libsodium/1.0.8 LIBARCHIVE=$HOME/pkgs/libarchive/3.2.0 LIBZMQ_PREFIX=$HOME/pkgs/zeromq/4.1.4 PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$LIBARCHIVE/lib/pkgconfig:$LIBSODIUM/lib/pkgconfig:$LIBZMQ_PREFIX/lib/pkgconfig" LD_LIBRARY_PATH="LD_LIBRARY_PATH:$LIBARCHIVE/lib:$LIBSODIUM/lib:$LIBZMQ_PREFIX/lib"
+      - AFFECTED_DIRS="components/builder-api|components/builder-admin|components/builder-jobsrv|components/builder-sessionsrv|components/builder-vault|components/builder-worker|components/builder-depot"
     rust: stable
     sudo: false
     addons:
@@ -102,7 +104,6 @@ matrix:
         - liblzma-dev
         - libprotobuf-dev
         - libssl-dev
-        - libzmq3-dev
         - pkg-config
     cache:
       apt: true
@@ -110,9 +111,11 @@ matrix:
       directories:
       - "$HOME/rust"
       - "$HOME/pkgs"
+      - "$HOME/.cargo"
       - target
     before_install:
     - ./support/ci/fast_pass.sh || exit 0
+    - ./support/ci/compile_zmq.sh
     - ./support/ci/compile_libsodium.sh
     - ./support/ci/compile_libarchive.sh
     - ./support/ci/install_rustfmt.sh
