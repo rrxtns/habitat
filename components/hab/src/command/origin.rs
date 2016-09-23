@@ -206,12 +206,12 @@ pub mod key {
                 Ok(()) => {
                     try!(ui.status(Status::Uploaded, &name_with_rev));
                 }
-                Err(e @ depot_client::Error::HTTP(Forbidden)) |
-                Err(e @ depot_client::Error::HTTP(Unauthorized)) => {
+                Err(e @ depot_client::Error::APIError(Forbidden, _)) |
+                Err(e @ depot_client::Error::APIError(Unauthorized, _)) => {
                     return Err(Error::from(e));
                 }
 
-                Err(e @ depot_client::Error::HTTP(_)) => {
+                Err(e @ depot_client::Error::APIError(_, _)) => {
                     debug!("Error uploading public key {}", e);
                     try!(ui.status(Status::Using,
                                    format!("public key revision {} which already \
@@ -282,11 +282,11 @@ pub mod key {
                 Ok(()) => {
                     try!(ui.status(Status::Uploaded, &name_with_rev));
                 }
-                Err(e @ depot_client::Error::HTTP(Forbidden)) |
-                Err(e @ depot_client::Error::HTTP(Unauthorized)) => {
+                Err(e @ depot_client::Error::APIError(Forbidden, _)) |
+                Err(e @ depot_client::Error::APIError(Unauthorized, _)) => {
                     return Err(Error::from(e));
                 }
-                Err(e @ depot_client::Error::HTTP(_)) => {
+                Err(e @ depot_client::Error::APIError(_, _)) => {
                     debug!("Error uploading public key {}", e);
                     try!(ui.status(Status::Using,
                                    format!("public key revision {} which already \

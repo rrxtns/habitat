@@ -26,9 +26,9 @@ use hab_http;
 
 #[derive(Debug)]
 pub enum Error {
+    APIError(hyper::status::StatusCode, String),
     HabitatCore(hab_core::Error),
     HabitatHttpClient(hab_http::Error),
-    HTTP(hyper::status::StatusCode),
     HyperError(hyper::error::Error),
     IO(io::Error),
     NoFilePart,
@@ -44,9 +44,10 @@ pub type Result<T> = result::Result<T, Error>;
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let msg = match *self {
+            Error::APIError(ref c, ref m) if m.len() > 0 => format!("[{}] {}", c, m),
+            Error::APIError(ref c, _) => format!("[{}]", c),
             Error::HabitatCore(ref e) => format!("{}", e),
             Error::HabitatHttpClient(ref e) => format!("{}", e),
-            Error::HTTP(ref e) => format!("{}", e),
             Error::HyperError(ref err) => format!("{}", err),
             Error::IO(ref e) => format!("{}", e),
             Error::NoFilePart => {
@@ -76,9 +77,9 @@ impl fmt::Display for Error {
 impl error::Error for Error {
     fn description(&self) -> &str {
         match *self {
+            Error::APIError(_, _) => "Received a non-2XX response code from API",
             Error::HabitatCore(ref err) => err.description(),
             Error::HabitatHttpClient(ref err) => err.description(),
-            Error::HTTP(_) => "Received an HTTP error",
             Error::HyperError(ref err) => err.description(),
             Error::IO(ref err) => err.description(),
             Error::NoFilePart => {

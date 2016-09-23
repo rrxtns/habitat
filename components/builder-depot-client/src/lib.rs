@@ -40,7 +40,7 @@ use hyper::client::{Body, IntoUrl, Response, RequestBuilder};
 use hyper::status::StatusCode;
 use hyper::header::{Authorization, Bearer};
 use hyper::Url;
-use protocol::depotsrv;
+use protocol::{depotsrv, net};
 use rustc_serialize::json;
 use tee::TeeReader;
 
@@ -138,7 +138,7 @@ impl Client {
         };
         match result {
             Ok(Response { status: StatusCode::Created, .. }) => Ok(()),
-            Ok(Response { status: code, .. }) => Err(Error::HTTP(code)),
+            Ok(response) => Err(err_from_response(response)),
             Err(e) => Err(Error::from(e)),
         }
     }
@@ -179,7 +179,7 @@ impl Client {
         };
         match result {
             Ok(Response { status: StatusCode::Created, .. }) => Ok(()),
-            Ok(Response { status: code, .. }) => Err(Error::HTTP(code)),
+            Ok(response) => Err(err_from_response(response)),
             Err(e) => Err(Error::from(e)),
         }
     }
@@ -212,7 +212,7 @@ impl Client {
                 let path = PathBuf::from(file);
                 Ok(PackageArchive::new(path))
             }
-            Err(Error::HTTP(StatusCode::NotFound)) => {
+            Err(Error::APIError(StatusCode::NotFound, _)) => {
                 Err(Error::RemotePackageNotFound(ident.into()))
             }
             Err(e) => Err(e),
@@ -282,7 +282,7 @@ impl Client {
         };
         match result {
             Ok(Response { status: StatusCode::Created, .. }) => Ok(()),
-            Ok(Response { status: code, .. }) => Err(Error::HTTP(code)),
+            Ok(response) => Err(err_from_response(response)),
             Err(e) => Err(Error::from(e)),
         }
     }
@@ -305,7 +305,7 @@ impl Client {
                     .unwrap();
                 Ok(packages)
             }
-            _ => Err(Error::HTTP(res.status)),
+            _ => Err(err_from_response(res)),
         }
     }
 
@@ -328,7 +328,7 @@ impl Client {
         debug!("Response: {:?}", res);
 
         if res.status != hyper::status::StatusCode::Ok {
-            return Err(Error::HTTP(res.status));
+            return Err(err_from_response(res));
         }
         try!(fs::create_dir_all(&dst_path));
 
@@ -355,5 +355,21 @@ impl Client {
                &dst_file_path.display());
         try!(fs::rename(&tmp_file_path, &dst_file_path));
         Ok(dst_file_path)
+    }
+}
+
+fn err_from_response(mut response: hyper::client::Response) -> Error {
+    let mut buff = String::new();
+    match response.read_to_string(&mut buff) {
+        Ok(_) => {
+            match json::decode::<net::NetError>(&buff) {
+                Ok(err) => Error::APIError(response.status, err.to_string()),
+                Err(_) => Error::APIError(response.status, buff),
+            }
+        }
+        Err(_) => {
+            buff.truncate(0);
+            Error::APIError(response.status, buff)
+        }
     }
 }

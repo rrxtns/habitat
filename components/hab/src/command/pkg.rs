@@ -484,12 +484,12 @@ pub mod upload {
                 try!(ui.status(Status::Uploaded,
                                format!("public origin key {}", &public_keyfile_name)));
             }
-            Err(e @ depot_client::Error::HTTP(Forbidden)) |
-            Err(e @ depot_client::Error::HTTP(Unauthorized)) => {
+            Err(e @ depot_client::Error::APIError(Forbidden, _)) |
+            Err(e @ depot_client::Error::APIError(Unauthorized, _)) => {
                 return Err(Error::from(e));
             }
 
-            Err(e @ depot_client::Error::HTTP(_)) => {
+            Err(e @ depot_client::Error::APIError(_, _)) => {
                 debug!("Error uploading public key {}", e);
                 try!(ui.status(Status::Using,
                                format!("existing public origin key {}", &public_keyfile_name)));
@@ -534,13 +534,13 @@ pub mod upload {
         try!(ui.status(Status::Uploading, archive.path.display()));
         match depot_client.put_package(&mut archive, token, ui.progress()) {
             Ok(()) => (),
-            Err(depot_client::Error::HTTP(StatusCode::Conflict)) => {
+            Err(depot_client::Error::APIError(StatusCode::Conflict, _)) => {
                 println!("Package already exists on remote; skipping.");
             }
-            Err(depot_client::Error::HTTP(StatusCode::UnprocessableEntity)) => {
+            Err(depot_client::Error::APIError(StatusCode::UnprocessableEntity, _)) => {
                 return Err(Error::PackageArchiveMalformed(format!("{}", archive.path.display())));
             }
-            Err(e @ depot_client::Error::HTTP(_)) => {
+            Err(e @ depot_client::Error::APIError(_, _)) => {
                 println!("Unexpected response from remote");
                 return Err(Error::from(e));
             }
@@ -560,20 +560,15 @@ pub mod upload {
                           archives_dir: &PathBuf)
                           -> Result<()> {
         let candidate_path = archives_dir.join(ident.archive_name().unwrap());
-
         if candidate_path.is_file() {
             let mut archive = PackageArchive::new(candidate_path);
             match upload_into_depot(ui, &depot_client, token, &ident, &mut archive) {
                 Ok(()) => Ok(()),
-                Err(Error::DepotClient(depot_client::Error::HTTP(e))) => {
-                    return Err(Error::DepotClient(depot_client::Error::HTTP(e)))
-                }
-                Err(Error::PackageArchiveMalformed(e)) => {
-                    return Err(Error::PackageArchiveMalformed(e))
-                }
+                Err(e @ Error::DepotClient(_)) => Err(e),
+                Err(Error::PackageArchiveMalformed(e)) => Err(Error::PackageArchiveMalformed(e)),
                 Err(e) => {
                     println!("Unknown error encountered: {:?}", e);
-                    return Err(e);
+                    Err(e)
                 }
             }
         } else {
@@ -581,8 +576,7 @@ pub mod upload {
                            format!("artifact for {} was not found in {}",
                                    ident.archive_name().unwrap(),
                                    archives_dir.display())));
-            return Err(Error::FileNotFound(archives_dir.to_string_lossy()
-                .into_owned()));
+            Err(Error::FileNotFound(archives_dir.to_string_lossy().into_owned()))
         }
     }
 }
